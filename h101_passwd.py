@@ -71,11 +71,7 @@ class H101Login:
                 else:
                     print(f"\n[-] Unknown response: \n{content}", end="")
             else:
-                # Print the ANSI escape code to hide the cursor
-                # print("\033[?25l", end="")
-                # Print the padded string with a carriage return
                 print(f"\r[*] Attempted requests: {seq_number}. Current password: {word}", end=" " * 10)
-                # Flush stdout to ensure immediate output
                 sys.stdout.flush()
             # time.sleep(0.2)
         except KeyboardInterrupt:
