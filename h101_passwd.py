@@ -95,12 +95,13 @@ class H101Login:
         self.c.print(f"Wordlist length: {len(wordlist)}")
         if resume:
             resume_confirm = self.p.ask("Want to resume previous session?", choices=["y", "n"], show_choices=True,
-                                default="y")
+                                        default="y")
             if resume_confirm == "y":
                 with open("h101_backup.json", "r") as bck_file:
                     backup_wordlist = json.load(bck_file)
                     wordlist = [word for word in wordlist if word not in backup_wordlist]
-                    self.c.print(f"Total passwords for attack: {len(wordlist)}. Already attempted: {len(backup_wordlist)}")
+                    self.c.print(
+                        f"Total passwords for attack: {len(wordlist)}. Already attempted: {len(backup_wordlist)}")
             else:
                 self.c.print(f"Total passwords for attack: {len(wordlist)}")
         elif not resume:
