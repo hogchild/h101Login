@@ -52,7 +52,6 @@ class H101Login:
                     seq_number += 1
             except KeyboardInterrupt:
                 self.close()
-                sys.exit("[-] Detected KeyboardInterrupt. Quitting...")
 
     def send_request(self, data) -> requests.Session.post:
         response = self.session.post(url=self.url, data=data)
@@ -83,13 +82,14 @@ class H101Login:
                     if not future.cancelled():
                         future.cancel()
             executor.shutdown(wait=True)
+        sys.exit("[-] Detected KeyboardInterrupt. Quitting...")
 
     def run(self):
         try:
             self.start_words_loop()
         except KeyboardInterrupt:
             self.close()
-            sys.exit("[-] Detected KeyboardInterrupt. Quitting...")
+            # sys.exit("[-] Detected KeyboardInterrupt. Quitting...")
 
 
 @click.command(
