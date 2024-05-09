@@ -160,7 +160,7 @@ class H101Login:
     type=pathlib.Path,
 )
 @click.option(
-    "-m", "--mas_threads", "max_threads",
+    "-m", "--max_threads", "max_threads",
     help="Type the number of concurrent threads.",
     default=10,
     required=True,
