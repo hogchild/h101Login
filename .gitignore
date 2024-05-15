@@ -6,3 +6,9 @@ users.txt
 .idea
 500-worst-passwords.txt
 test.py
+gui.py
+.h101_backup.json
+.h101_backup1.json
+.h101_backup_bkp.json
+h101_passwd.bkp.py
+h101_passwd.bkp_master.py
